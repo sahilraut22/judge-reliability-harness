@@ -1,4 +1,7 @@
-### [Read the docs](https://randcorporation.github.io/judge-reliability-harness/)
+## [Read the docs](https://randcorporation.github.io/judge-reliability-harness/)
+
+
+## [RAND Product Page](https://www.rand.org/pubs/tools/TLA4547-1.html)
 
 
 ## Project Overview
@@ -85,4 +88,24 @@ We use ruff as our linter. Before committing code, run these commands and fix an
 ```bash
 ruff format
 ruff check --fix
+```
+
+## LICENSE
+
+This code is provided under the MIT license. 
+
+## BibTeX Citation
+
+If you use this package in a scientific publication, we would appreciate if you use the following citation:
+
+```
+@misc{dev2026judge-reliability-harness,
+  author       = {Sunishchal Dev, Andrew Sloan, Joshua Kavner,
+                  Nicholas Kong, and Morgan Sandler},
+  title        = {Judge Reliability Harness},
+  year         = 2026,
+  publisher    = {RAND},
+  url          = {https://github.com/RANDCorporation/judge-reliability-harness},
+}
+
 ```
