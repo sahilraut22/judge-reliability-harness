@@ -33,6 +33,12 @@ class LLMClient:
 			self.client = instructor.from_provider(
 				"anthropic/claude-3-haiku-20240307", mode=instructor.Mode.ANTHROPIC_JSON
 			)
+		elif self.config.model and self.config.model.startswith("openai/"):
+			# OpenAI-compatible endpoints (incl. DeepInfra via OPENAI_BASE_URL) can
+			# return multiple tool calls, which instructor's default TOOLS mode
+			# rejects ("Instructor does not support multiple tool calls"). JSON mode
+			# requests a single JSON object instead and avoids the failure.
+			self.client = instructor.from_provider(self.config.model, mode=instructor.Mode.JSON)
 		else:
 			self.client = instructor.from_provider(self.config.model)
 
