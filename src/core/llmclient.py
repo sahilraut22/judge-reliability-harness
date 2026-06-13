@@ -143,6 +143,10 @@ class LLMClient:
 		if fixed_seed is not None and "seed" in sig.parameters:
 			args["seed"] = fixed_seed
 
+		# Forward extra_body unconditionally; instructor/openai pass it through the OpenAI client body.
+		if self.config.extra_body:
+			args["extra_body"] = self.config.extra_body
+
 		return args
 
 	def call(

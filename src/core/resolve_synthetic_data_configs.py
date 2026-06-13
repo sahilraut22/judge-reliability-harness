@@ -56,7 +56,9 @@ def resolve_basic_perturbations_config(
 		template="synthetic/basic_perturbation",
 		default_params=default_params,
 		test_debug_mode=admin_config.test_debug_mode,
+		temperature=synthetic_data_params.get("generation_temperature", 0.0),
 		max_tokens=synthetic_data_params["max_tokens_generation"],
+		extra_body=synthetic_data_params.get("generation_extra_body"),
 	)
 
 	# validation stage
@@ -67,6 +69,7 @@ def resolve_basic_perturbations_config(
 		test_debug_mode=admin_config.test_debug_mode,
 		temperature=1.0,
 		max_tokens=synthetic_data_params["max_tokens_validation"],
+		extra_body=synthetic_data_params.get("validation_extra_body"),
 	)
 
 	config_dict = {

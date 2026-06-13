@@ -27,6 +27,9 @@ class LLMClientConfig(BaseModel):
 	)
 	retries: int = Field(3, description="Max number of retries to use.")
 	max_tokens: int = Field(1200, gt=0, description="Maximum tokens for LLMs.")
+	extra_body: Optional[Dict[str, Any]] = Field(
+		None, description="Extra body params forwarded to the OpenAI-compatible client (e.g., chat_template_kwargs)."
+	)
 
 
 class JudgeConfig(BaseModel):
