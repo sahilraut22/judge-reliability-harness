@@ -98,7 +98,7 @@ def test_generation_params_default_when_absent():
 
 
 def test_fill_in_args_includes_extra_body_when_set(monkeypatch):
-	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model: MagicMock())
+	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model, **kwargs: MagicMock())
 
 	config = LLMClientConfig(
 		model="alibaba/Qwen3.5-9B",
@@ -115,7 +115,7 @@ def test_fill_in_args_includes_extra_body_when_set(monkeypatch):
 
 
 def test_fill_in_args_omits_extra_body_when_absent(monkeypatch):
-	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model: MagicMock())
+	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model, **kwargs: MagicMock())
 
 	config = LLMClientConfig(
 		model="openai/gpt-4o-mini",
@@ -144,7 +144,7 @@ def test_fill_in_args_extra_body_added_once_and_clobbers_nothing(monkeypatch):
 
 	fake_client = MagicMock()
 	fake_client.chat.completions.create = _fake_create
-	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model: fake_client)
+	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model, **kwargs: fake_client)
 
 	config = LLMClientConfig(
 		model="alibaba/Qwen3.5-9B",

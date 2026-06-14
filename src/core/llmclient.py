@@ -1,6 +1,11 @@
 # src/core/llmclient.py
 
 import inspect
+import json
+import os
+import threading
+import time
+from datetime import datetime, timezone
 from functools import wraps
 from textwrap import dedent
 from types import MethodType
@@ -17,6 +22,70 @@ from schemas import (
 
 from .constants import VALID_TEMPLATES, console
 from .resolve_templates import get_prompt
+
+# --------------------------------------------------------------------------- #
+# jfc per-call generation logging (pre-reg §6 / #11)
+#
+# The generation calls run through instructor's OpenAI route
+# (instructor.from_provider("openai/...")), which uses the OpenAI SDK directly,
+# NOT litellm.completion -- so a litellm success_callback never fires for them.
+# Per-call logging is therefore done HERE, at the call boundary, and is fully
+# OPT-IN: it activates only when the env var JFC_GEN_CALL_LOG names an output
+# path. Unset (the fork's standalone default) -> zero behavior change, the call
+# takes the original create() path. Logging NEVER raises into generation.
+# --------------------------------------------------------------------------- #
+JFC_GEN_CALL_LOG_ENV = "JFC_GEN_CALL_LOG"
+_JFC_LOG_LOCK = threading.Lock()
+
+
+def _jfc_log_path() -> Optional[str]:
+	"""Return the per-call log path if logging is enabled, else None."""
+	path = os.environ.get(JFC_GEN_CALL_LOG_ENV)
+	return path or None
+
+
+def _jfc_usage_field(usage: Any, name: str) -> Optional[int]:
+	"""Read a token field from an OpenAI/instructor usage object or dict."""
+	if usage is None:
+		return None
+	if isinstance(usage, dict):
+		return usage.get(name)
+	return getattr(usage, name, None)
+
+
+def _jfc_emit_call_log(
+	path: str,
+	*,
+	model: Optional[str],
+	usage: Any,
+	latency_ms: int,
+	status: str,
+	error: Optional[str] = None,
+) -> None:
+	"""Append one JSON line describing a generation call. Never raises."""
+	try:
+		row = {
+			"ts": datetime.now(timezone.utc).isoformat(),
+			"phase": "generation",
+			"model": model,
+			"status": status,
+			"prompt_tokens": _jfc_usage_field(usage, "prompt_tokens"),
+			"completion_tokens": _jfc_usage_field(usage, "completion_tokens"),
+			"total_tokens": _jfc_usage_field(usage, "total_tokens"),
+			"latency_ms": latency_ms,
+			"error": error,
+		}
+		line = json.dumps(row, ensure_ascii=False)
+		with _JFC_LOG_LOCK:
+			parent = os.path.dirname(path)
+			if parent:
+				os.makedirs(parent, exist_ok=True)
+			with open(path, "a", encoding="utf-8", newline="\n") as fh:
+				fh.write(line + "\n")
+				fh.flush()
+	except Exception:
+		# Logging must NEVER break generation; swallow anything that goes wrong.
+		pass
 
 
 class LLMClient:
@@ -184,9 +253,33 @@ class LLMClient:
 
 		# Make and return LLM call
 		args = self._fill_in_args(user_prompt, response_schema, temperature, fixed_seed)
+		log_path = _jfc_log_path()
+		start = time.monotonic()
 		try:
-			response = self.client.chat.completions.create(**args)
+			if log_path:
+				# create_with_completion also returns the raw completion, whose
+				# .usage carries the token counts we log. Same underlying call and
+				# same parsed result as create() -- output is unchanged.
+				response, completion = self.client.chat.completions.create_with_completion(**args)
+				_jfc_emit_call_log(
+					log_path,
+					model=self.config.model,
+					usage=getattr(completion, "usage", None),
+					latency_ms=int((time.monotonic() - start) * 1000),
+					status="ok",
+				)
+			else:
+				response = self.client.chat.completions.create(**args)
 		except Exception as e:
+			if log_path:
+				_jfc_emit_call_log(
+					log_path,
+					model=self.config.model,
+					usage=None,
+					latency_ms=int((time.monotonic() - start) * 1000),
+					status="error",
+					error=str(e),
+				)
 			console.print(f"Error during LLM call: {e}")
 			return BasicLLMResponseBool(score=0, reasoning=f"Error during LLM call: {e}")
 

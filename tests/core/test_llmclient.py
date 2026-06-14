@@ -11,7 +11,7 @@ from schemas import LLMClientConfig, BasicLLMResponseBool
 def mock_instructor(monkeypatch):
 	dummy_client = MagicMock()
 	dummy_client.chat.completions.create.return_value = {"score": 1, "reasoning": "ok"}
-	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model: dummy_client)
+	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model, **kwargs: dummy_client)
 	return dummy_client
 
 
@@ -42,7 +42,7 @@ def dummy_dataset():
 
 def test_init_sets_attributes_and_rate_limit(monkeypatch, dummy_config):
 	dummy_client = MagicMock()
-	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model: dummy_client)
+	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model, **kwargs: dummy_client)
 
 	client = LLMClient(dummy_config)
 
@@ -84,7 +84,7 @@ def test_call_successful_llm(monkeypatch, dummy_config):
 	dummy_client = MagicMock()
 	dummy_client.chat = dummy_chat
 
-	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model: dummy_client)
+	monkeypatch.setattr("core.llmclient.instructor.from_provider", lambda model, **kwargs: dummy_client)
 
 	client = LLMClient(dummy_config)
 	resp = client.call({"question": "Q"})
